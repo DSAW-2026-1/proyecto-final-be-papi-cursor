@@ -1,0 +1,291 @@
+### Unisabana Marketplace API - Pruebas
+### Usa la extensión REST Client de VS Code para ejecutar estas pruebas
+
+@baseUrl = http://localhost:3000/api
+@token = 
+
+### ============================================
+### AUTENTICACIÓN
+### ============================================
+
+### 1. Crear primer admin (solo una vez)
+POST {{baseUrl}}/admin/create-admin
+Content-Type: application/json
+
+{
+  "email": "admin@unisabana.edu.co",
+  "password": "admin123",
+  "name": "Administrador"
+}
+
+### 2. Registrar usuario 1 (Comprador/Vendedor)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "maria.gomez@unisabana.edu.co",
+  "password": "password123",
+  "name": "María Gómez"
+}
+
+### 3. Registrar usuario 2 (Comprador)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "carlos.ruiz@unisabana.edu.co",
+  "password": "password123",
+  "name": "Carlos Ruiz"
+}
+
+### 4. Login usuario 1 (Guardar el token)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria.gomez@unisabana.edu.co",
+  "password": "password123"
+}
+
+### 5. Login usuario 2
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "carlos.ruiz@unisabana.edu.co",
+  "password": "password123"
+}
+
+### 6. Ver mi perfil
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{token}}
+
+### 7. Convertirse en vendedor
+POST {{baseUrl}}/auth/become-seller
+Authorization: Bearer {{token}}
+
+### ============================================
+### PRODUCTOS
+### ============================================
+
+### 8. Publicar producto 1
+POST {{baseUrl}}/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Calculadora Científica Casio",
+  "price": 45000,
+  "description": "Calculadora en perfecto estado, usada solo un semestre",
+  "stock": 1,
+  "image": "https://example.com/calculadora.jpg"
+}
+
+### 9. Publicar producto 2
+POST {{baseUrl}}/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Libro Cálculo III",
+  "price": 80000,
+  "description": "Libro de Stewart, 8va edición, como nuevo",
+  "stock": 1
+}
+
+### 10. Ver todos los productos (sin auth)
+GET {{baseUrl}}/products
+
+### 11. Ver producto específico
+GET {{baseUrl}}/products/PRODUCT_ID_AQUI
+
+### 12. Buscar productos
+GET {{baseUrl}}/products?search=calculadora&minPrice=30000&maxPrice=50000
+
+### 13. Actualizar producto
+PUT {{baseUrl}}/products/PRODUCT_ID_AQUI
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "price": 40000,
+  "description": "Calculadora en perfecto estado - PRECIO REBAJADO"
+}
+
+### 14. Eliminar producto (marcar como inactivo)
+DELETE {{baseUrl}}/products/PRODUCT_ID_AQUI
+Authorization: Bearer {{token}}
+
+### ============================================
+### CARRITO
+### ============================================
+
+### 15. Ver mi carrito
+GET {{baseUrl}}/cart
+Authorization: Bearer {{token}}
+
+### 16. Agregar producto al carrito
+POST {{baseUrl}}/cart/add
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": "PRODUCT_ID_AQUI",
+  "quantity": 1
+}
+
+### 17. Actualizar cantidad en carrito
+PUT {{baseUrl}}/cart/update/ITEM_ID_AQUI
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+
+### 18. Eliminar del carrito
+DELETE {{baseUrl}}/cart/remove/ITEM_ID_AQUI
+Authorization: Bearer {{token}}
+
+### 19. Vaciar carrito
+DELETE {{baseUrl}}/cart/clear
+Authorization: Bearer {{token}}
+
+### ============================================
+### ÓRDENES
+### ============================================
+
+### 20. Crear orden desde el carrito
+POST {{baseUrl}}/orders/create
+Authorization: Bearer {{token}}
+
+### 21. Ver mis órdenes (compras y ventas)
+GET {{baseUrl}}/orders/my-orders
+Authorization: Bearer {{token}}
+
+### 22. Ver orden específica
+GET {{baseUrl}}/orders/ORDER_ID_AQUI
+Authorization: Bearer {{token}}
+
+### 23. Marcar orden como entregada (vendedor)
+PATCH {{baseUrl}}/orders/ORDER_ID_AQUI/deliver
+Authorization: Bearer {{token}}
+
+### 24. Cancelar orden (comprador)
+PATCH {{baseUrl}}/orders/ORDER_ID_AQUI/cancel
+Authorization: Bearer {{token}}
+
+### ============================================
+### CONVERSACIONES Y CHAT
+### ============================================
+
+### 25. Crear conversación sobre un producto
+POST {{baseUrl}}/conversations
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": "PRODUCT_ID_AQUI"
+}
+
+### 26. Ver todas mis conversaciones
+GET {{baseUrl}}/conversations
+Authorization: Bearer {{token}}
+
+### 27. Ver conversación específica con mensajes
+GET {{baseUrl}}/conversations/CONVERSATION_ID_AQUI
+Authorization: Bearer {{token}}
+
+### 28. Enviar mensaje en conversación
+POST {{baseUrl}}/conversations/CONVERSATION_ID_AQUI/messages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "Hola, ¿el producto está disponible?"
+}
+
+### ============================================
+### RESEÑAS
+### ============================================
+
+### 29. Dejar reseña a vendedor
+POST {{baseUrl}}/reviews
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sellerId": "SELLER_ID_AQUI",
+  "orderId": "ORDER_ID_AQUI",
+  "rating": 5,
+  "comment": "Excelente vendedor, muy recomendado!"
+}
+
+### 30. Ver reseñas de un vendedor
+GET {{baseUrl}}/reviews?sellerId=SELLER_ID_AQUI
+
+### ============================================
+### NOTIFICACIONES
+### ============================================
+
+### 31. Ver mis notificaciones
+GET {{baseUrl}}/notifications
+Authorization: Bearer {{token}}
+
+### 32. Marcar notificación como leída
+PATCH {{baseUrl}}/notifications/NOTIFICATION_ID_AQUI/read
+Authorization: Bearer {{token}}
+
+### 33. Marcar todas como leídas
+PATCH {{baseUrl}}/notifications/read-all
+Authorization: Bearer {{token}}
+
+### ============================================
+### ADMIN
+### ============================================
+
+### 34. Ver dashboard (solo admin)
+GET {{baseUrl}}/admin/dashboard
+Authorization: Bearer {{token}}
+
+### 35. Ver todos los usuarios (solo admin)
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{token}}
+
+### 36. Ver todos los productos (solo admin)
+GET {{baseUrl}}/admin/products
+Authorization: Bearer {{token}}
+
+### 37. Ver todas las órdenes (solo admin)
+GET {{baseUrl}}/admin/orders
+Authorization: Bearer {{token}}
+
+### 38. Desactivar producto (solo admin)
+PATCH {{baseUrl}}/admin/products/PRODUCT_ID_AQUI/deactivate
+Authorization: Bearer {{token}}
+
+### ============================================
+### PRUEBA DE ERRORES
+### ============================================
+
+### Intento de registro con email inválido
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@gmail.com",
+  "password": "password123",
+  "name": "Test User"
+}
+
+### Intento de login con credenciales incorrectas
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria.gomez@unisabana.edu.co",
+  "password": "wrongpassword"
+}
+
+### Intento de acceder sin token
+GET {{baseUrl}}/cart
