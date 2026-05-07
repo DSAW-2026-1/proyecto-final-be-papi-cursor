@@ -1,10 +1,11 @@
 const express = require('express');
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Ticket 8: Ver métricas básicas del marketplace (dashboard)
+// Ticket 12: Ver métricas básicas del marketplace (dashboard)
 router.get('/dashboard', authenticateToken, isAdmin, (req, res) => {
   try {
     // Obtener todos los usuarios
@@ -85,6 +86,41 @@ router.get('/users', authenticateToken, isAdmin, (req, res) => {
   }
 });
 
+// Ticket 14: Suspender o rehabilitar un usuario
+router.put('/users/:id/status', authenticateToken, isAdmin, (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!status || !['suspended', 'active'].includes(status)) {
+      return res.status(400).json({
+        error: 'Invalid status value. Use "suspended" or "active".'
+      });
+    }
+
+    const user = database.users.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuario no encontrado.'
+      });
+    }
+
+    const updatedUser = database.users.update(req.params.id, { status });
+    const { password: _, ...userWithoutPassword } = updatedUser;
+
+    res.json({
+      message: `Usuario ${status === 'suspended' ? 'suspendido' : 'rehabilitado'} exitosamente.`,
+      user: userWithoutPassword
+    });
+
+  } catch (error) {
+    console.error('Error al actualizar estado del usuario:', error);
+    res.status(500).json({
+      error: 'Error al actualizar el estado del usuario.'
+    });
+  }
+});
+
 // Obtener todos los productos (solo admin)
 router.get('/products', authenticateToken, isAdmin, (req, res) => {
   try {
@@ -121,30 +157,29 @@ router.get('/orders', authenticateToken, isAdmin, (req, res) => {
   }
 });
 
-// Desactivar un producto (solo admin)
-router.patch('/products/:id/deactivate', authenticateToken, isAdmin, (req, res) => {
+// Ticket 13: Eliminar un producto como administrador (soft delete — isActive: false)
+router.delete('/products/:id', authenticateToken, isAdmin, (req, res) => {
   try {
     const product = database.products.findById(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ 
-        error: 'Producto no encontrado.' 
+      return res.status(404).json({
+        error: 'Producto no encontrado.'
       });
     }
 
-    const updatedProduct = database.products.update(req.params.id, { 
-      isActive: false 
-    });
+    database.products.update(req.params.id, { isActive: false });
 
-    res.json({ 
-      message: 'Producto desactivado exitosamente.',
-      product: updatedProduct
+    res.json({
+      message: 'Producto eliminado por administrador.',
+      productId: req.params.id,
+      deletedAt: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('Error al desactivar producto:', error);
-    res.status(500).json({ 
-      error: 'Error al desactivar el producto.' 
+    console.error('Error al eliminar producto:', error);
+    res.status(500).json({
+      error: 'Error al eliminar el producto.'
     });
   }
 });
@@ -196,6 +231,37 @@ router.post('/create-admin', async (req, res) => {
     res.status(500).json({ 
       error: 'Error al crear el administrador.' 
     });
+  }
+});
+
+// Ticket 16: Ver todos los reportes (admin) y resolver un reporte
+router.get('/reports', authenticateToken, isAdmin, (req, res) => {
+  try {
+    const reports = database.reports.getAll();
+    res.json({ reports });
+  } catch (error) {
+    console.error('Error al obtener reportes:', error);
+    res.status(500).json({ error: 'Error al obtener los reportes.' });
+  }
+});
+
+router.put('/reports/:id/resolve', authenticateToken, isAdmin, (req, res) => {
+  try {
+    const report = database.reports.findById(req.params.id);
+
+    if (!report) {
+      return res.status(404).json({ error: 'Reporte no encontrado.' });
+    }
+
+    const updatedReport = database.reports.update(req.params.id, {
+      status: 'resolved',
+      resolvedAt: new Date().toISOString()
+    });
+
+    res.json({ message: 'Reporte resuelto exitosamente.', report: updatedReport });
+  } catch (error) {
+    console.error('Error al resolver reporte:', error);
+    res.status(500).json({ error: 'Error al resolver el reporte.' });
   }
 });
 

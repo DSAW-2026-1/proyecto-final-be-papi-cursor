@@ -1,5 +1,7 @@
 // Base de datos en memoria para desarrollo
 // En producción, reemplazar con una base de datos real (PostgreSQL, MongoDB, etc.)
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
+// Entidades almacenadas: users, products, carts, orders, conversations, messages, reviews, notifications, reports
 
 const db = {
   users: [],
@@ -9,7 +11,8 @@ const db = {
   conversations: [],
   messages: [],
   reviews: [],
-  notifications: []
+  notifications: [],
+  reports: []
 };
 
 // Funciones helper para la base de datos
@@ -116,6 +119,14 @@ const database = {
     create: (conversation) => {
       db.conversations.push(conversation);
       return conversation;
+    },
+    update: (id, updates) => {
+      const index = db.conversations.findIndex(c => c.id === id);
+      if (index !== -1) {
+        db.conversations[index] = { ...db.conversations[index], ...updates };
+        return db.conversations[index];
+      }
+      return null;
     }
   },
 
@@ -127,6 +138,14 @@ const database = {
     create: (message) => {
       db.messages.push(message);
       return message;
+    },
+    update: (id, updates) => {
+      const index = db.messages.findIndex(m => m.id === id);
+      if (index !== -1) {
+        db.messages[index] = { ...db.messages[index], ...updates };
+        return db.messages[index];
+      }
+      return null;
     }
   },
 
@@ -152,6 +171,24 @@ const database = {
       if (index !== -1) {
         db.notifications[index] = { ...db.notifications[index], ...updates };
         return db.notifications[index];
+      }
+      return null;
+    }
+  },
+
+  // Reportes
+  reports: {
+    getAll: () => db.reports,
+    findById: (id) => db.reports.find(r => r.id === id),
+    create: (report) => {
+      db.reports.push(report);
+      return report;
+    },
+    update: (id, updates) => {
+      const index = db.reports.findIndex(r => r.id === id);
+      if (index !== -1) {
+        db.reports[index] = { ...db.reports[index], ...updates };
+        return db.reports[index];
       }
       return null;
     }
