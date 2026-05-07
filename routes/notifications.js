@@ -1,10 +1,11 @@
 const express = require('express');
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Ticket 7: Listar notificaciones del usuario
+// Ticket 11: Listar y marcar notificaciones como leídas (listar)
 router.get('/', authenticateToken, (req, res) => {
   try {
     const notifications = database.notifications.findByUser(req.user.id);

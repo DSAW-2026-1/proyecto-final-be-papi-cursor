@@ -1,11 +1,12 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Ticket 1: Obtener el carrito del usuario
+// Ticket 32: Creación del carrito de compras y gestión de productos (obtener carrito)
 router.get('/', authenticateToken, (req, res) => {
   try {
     let cart = database.carts.findByUser(req.user.id);

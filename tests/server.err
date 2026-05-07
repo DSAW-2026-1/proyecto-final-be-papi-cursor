@@ -1,0 +1,44 @@
+Error al enviar mensaje: TypeError: database.conversations.update is not a function
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\routes\conversations.js:207:28
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at authenticateToken (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\middleware\auth.js:22:5)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\index.js:284:15
+    at param (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\index.js:365:14)
+Error al enviar mensaje: TypeError: database.conversations.update is not a function
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\routes\conversations.js:207:28
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at authenticateToken (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\middleware\auth.js:22:5)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\index.js:284:15
+    at param (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\index.js:365:14)
+Error al enviar mensaje: TypeError: database.conversations.update is not a function
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\routes\conversations.js:207:28
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at authenticateToken (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\middleware\auth.js:22:5)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\index.js:284:15
+    at param (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\index.js:365:14)
+Error al obtener conversación: TypeError: database.messages.update is not a function
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\routes\conversations.js:141:27
+    at Array.forEach (<anonymous>)
+    at C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\routes\conversations.js:139:14
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at authenticateToken (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\middleware\auth.js:22:5)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\Users\julia\OneDrive\Documentos\Trabajos y recursos\Tercer semestre\web\TRD marketplace - Proyecto final\MarketPlaceDSAW26-01\node_modules\express\lib\router\layer.js:95:5)

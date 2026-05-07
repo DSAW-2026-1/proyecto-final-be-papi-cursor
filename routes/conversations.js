@@ -1,12 +1,13 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { createNotification, NotificationTypes } = require('../utils/notifications');
 
 const router = express.Router();
 
-// Ticket 5: Crear una conversación
+// Ticket 4: Crear una conversación entre comprador y vendedor
 router.post('/', authenticateToken, (req, res) => {
   try {
     const { productId } = req.body;

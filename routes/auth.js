@@ -2,12 +2,13 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Ticket 2: Registro con validación de correo institucional
+// Ticket 1: Generar registro con validación de correo institucional
 router.post('/register', async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -76,7 +77,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Ticket 10: Inicio de sesión
+// Ticket 21: Inicio de sesión y entrega de llave de acceso
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;

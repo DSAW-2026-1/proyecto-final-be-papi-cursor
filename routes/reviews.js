@@ -1,12 +1,13 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
+// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 const { createNotification, NotificationTypes } = require('../utils/notifications');
 
 const router = express.Router();
 
-// Ticket 6: Dejar una reseña a un vendedor
+// Ticket 8: Dejar una reseña a un vendedor tras una compra
 router.post('/', authenticateToken, (req, res) => {
   try {
     const { sellerId, orderId, rating, comment } = req.body;
@@ -98,7 +99,7 @@ router.post('/', authenticateToken, (req, res) => {
   }
 });
 
-// Ver las reseñas de un vendedor
+// Ticket 9: Ver las reseñas de un vendedor y su promedio
 router.get('/', (req, res) => {
   try {
     const { sellerId } = req.query;
