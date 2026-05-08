@@ -14,7 +14,7 @@ const authenticateToken = (req, res, next) => {
 
   try {
     // Verificar el token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'unisabana-marketplace-secret-2026');
     
     // Agregar la información del usuario a la request
     req.user = decoded;

@@ -114,7 +114,7 @@ router.post('/login', async (req, res) => {
         email: user.email,
         roles: user.roles
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'unisabana-marketplace-secret-2026',
       { expiresIn: '24h' }
     );
 
