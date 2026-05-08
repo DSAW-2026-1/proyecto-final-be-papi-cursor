@@ -187,7 +187,7 @@ router.delete('/products/:id', authenticateToken, isAdmin, (req, res) => {
 // Crear un usuario admin (solo para inicialización)
 router.post('/create-admin', async (req, res) => {
   try {
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const { email, password, name } = req.body;
 
     // Verificar si ya existe un admin
