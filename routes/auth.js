@@ -177,4 +177,27 @@ router.post('/become-seller', authenticateToken, async (req, res) => {
   });
 });
 
+// Ruta para quitar el rol de vendedor
+router.post('/leave-seller', authenticateToken, async (req, res) => {
+  const user = await database.users.findById(req.user.id);
+
+  if (!user) {
+    return res.status(404).json({ error: 'Usuario no encontrado.' });
+  }
+
+  if (!user.roles.includes('seller')) {
+    return res.status(400).json({ error: 'No tienes el rol de vendedor.' });
+  }
+
+  user.roles = user.roles.filter(r => r !== 'seller');
+  await database.users.update(user.id, { roles: user.roles });
+
+  const { password: _, ...userWithoutPassword } = user;
+
+  res.json({
+    message: 'Has dejado de ser vendedor.',
+    user: userWithoutPassword
+  });
+});
+
 module.exports = router;
