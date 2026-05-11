@@ -237,11 +237,12 @@ router.delete('/:id', authenticateToken, authorizeRole('seller'), async (req, re
 // Obtener productos del vendedor autenticado
 router.get('/my/products', authenticateToken, authorizeRole('seller'), async (req, res) => {
   try {
-    const products = await database.products.findBySeller(req.user.id);
+    const all = await database.products.findBySeller(req.user.id);
+    const products = all.filter(p => p.isActive);
 
-    res.json({ 
+    res.json({
       count: products.length,
-      products 
+      products
     });
 
   } catch (error) {
