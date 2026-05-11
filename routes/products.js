@@ -7,7 +7,7 @@ const { authenticateToken, authorizeRole } = require('../middleware/auth');
 const router = express.Router();
 
 // Ticket 24: Publicar un nuevo artículo en la tienda
-router.post('/', authenticateToken, authorizeRole('seller'), (req, res) => {
+router.post('/', authenticateToken, authorizeRole('seller'), async (req, res) => {
   try {
     const { name, price, description, image, stock } = req.body;
 
@@ -46,7 +46,7 @@ router.post('/', authenticateToken, authorizeRole('seller'), (req, res) => {
       updatedAt: new Date().toISOString()
     };
 
-    database.products.create(newProduct);
+    await database.products.create(newProduct);
 
     res.status(201).json({ 
       message: 'Producto publicado exitosamente.',
@@ -62,16 +62,16 @@ router.post('/', authenticateToken, authorizeRole('seller'), (req, res) => {
 });
 
 // Obtener todos los productos (marketplace)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { search, minPrice, maxPrice, sellerId } = req.query;
     
-    let products = database.products.getAll().filter(p => p.isActive);
+    let products = (await database.products.getAll()).filter(p => p.isActive);
 
     // Filtrar por búsqueda
     if (search) {
       const searchLower = search.toLowerCase();
-      products = products.filter(p => 
+      products = products.filter(p =>
         p.name.toLowerCase().includes(searchLower) ||
         p.description.toLowerCase().includes(searchLower)
       );
@@ -91,8 +91,8 @@ router.get('/', (req, res) => {
     }
 
     // Agregar información del vendedor
-    const productsWithSeller = products.map(product => {
-      const seller = database.users.findById(product.sellerId);
+    const productsWithSeller = await Promise.all(products.map(async (product) => {
+      const seller = await database.users.findById(product.sellerId);
       return {
         ...product,
         seller: seller ? {
@@ -101,7 +101,7 @@ router.get('/', (req, res) => {
           email: seller.email
         } : null
       };
-    });
+    }));
 
     res.json({ 
       count: productsWithSeller.length,
@@ -117,9 +117,9 @@ router.get('/', (req, res) => {
 });
 
 // Obtener un producto específico
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const product = database.products.findById(req.params.id);
+    const product = await database.products.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ 
@@ -128,7 +128,7 @@ router.get('/:id', (req, res) => {
     }
 
     // Agregar información del vendedor
-    const seller = database.users.findById(product.sellerId);
+    const seller = await database.users.findById(product.sellerId);
     const productWithSeller = {
       ...product,
       seller: seller ? {
@@ -149,9 +149,9 @@ router.get('/:id', (req, res) => {
 });
 
 // Modificar un producto (solo el vendedor dueño)
-router.put('/:id', authenticateToken, authorizeRole('seller'), (req, res) => {
+router.put('/:id', authenticateToken, authorizeRole('seller'), async (req, res) => {
   try {
-    const product = database.products.findById(req.params.id);
+    const product = await database.products.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ 
@@ -187,7 +187,7 @@ router.put('/:id', authenticateToken, authorizeRole('seller'), (req, res) => {
     if (stock !== undefined) updates.stock = parseInt(stock);
     if (isActive !== undefined) updates.isActive = isActive;
 
-    const updatedProduct = database.products.update(req.params.id, updates);
+    const updatedProduct = await database.products.update(req.params.id, updates);
 
     res.json({ 
       message: 'Producto actualizado exitosamente.',
@@ -203,9 +203,9 @@ router.put('/:id', authenticateToken, authorizeRole('seller'), (req, res) => {
 });
 
 // Eliminar un producto (marcar como inactivo)
-router.delete('/:id', authenticateToken, authorizeRole('seller'), (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRole('seller'), async (req, res) => {
   try {
-    const product = database.products.findById(req.params.id);
+    const product = await database.products.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({ 
@@ -220,7 +220,7 @@ router.delete('/:id', authenticateToken, authorizeRole('seller'), (req, res) => 
       });
     }
 
-    database.products.update(req.params.id, { isActive: false });
+    await database.products.update(req.params.id, { isActive: false });
 
     res.json({ 
       message: 'Producto eliminado exitosamente.' 
@@ -235,9 +235,9 @@ router.delete('/:id', authenticateToken, authorizeRole('seller'), (req, res) => 
 });
 
 // Obtener productos del vendedor autenticado
-router.get('/my/products', authenticateToken, authorizeRole('seller'), (req, res) => {
+router.get('/my/products', authenticateToken, authorizeRole('seller'), async (req, res) => {
   try {
-    const products = database.products.findBySeller(req.user.id);
+    const products = await database.products.findBySeller(req.user.id);
 
     res.json({ 
       count: products.length,

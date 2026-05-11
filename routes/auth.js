@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
     }
 
     // Verificar si el usuario ya existe
-    const existingUser = database.users.findByEmail(email);
+    const existingUser = await database.users.findByEmail(email);
     if (existingUser) {
       return res.status(409).json({ 
         error: 'Este correo ya está registrado.' 
@@ -59,7 +59,7 @@ router.post('/register', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    database.users.create(newUser);
+    await database.users.create(newUser);
 
     // No devolver la contraseña en la respuesta
     const { password: _, ...userWithoutPassword } = newUser;
@@ -90,7 +90,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Buscar el usuario por email
-    const user = database.users.findByEmail(email);
+    const user = await database.users.findByEmail(email);
     
     if (!user) {
       return res.status(401).json({ 
@@ -136,8 +136,8 @@ router.post('/login', async (req, res) => {
 });
 
 // Ruta para obtener el perfil del usuario autenticado
-router.get('/profile', authenticateToken, (req, res) => {
-  const user = database.users.findById(req.user.id);
+router.get('/profile', authenticateToken, async (req, res) => {
+  const user = await database.users.findById(req.user.id);
   
   if (!user) {
     return res.status(404).json({ 
@@ -151,8 +151,8 @@ router.get('/profile', authenticateToken, (req, res) => {
 });
 
 // Ruta para actualizar el rol del usuario (agregar rol de vendedor)
-router.post('/become-seller', authenticateToken, (req, res) => {
-  const user = database.users.findById(req.user.id);
+router.post('/become-seller', authenticateToken, async (req, res) => {
+  const user = await database.users.findById(req.user.id);
   
   if (!user) {
     return res.status(404).json({ 
@@ -167,7 +167,7 @@ router.post('/become-seller', authenticateToken, (req, res) => {
   }
 
   user.roles.push('seller');
-  database.users.update(user.id, { roles: user.roles });
+  await database.users.update(user.id, { roles: user.roles });
 
   const { password: _, ...userWithoutPassword } = user;
 

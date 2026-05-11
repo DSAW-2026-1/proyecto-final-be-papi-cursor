@@ -6,17 +6,17 @@ const { authenticateToken, isAdmin } = require('../middleware/auth');
 const router = express.Router();
 
 // Ticket 12: Ver métricas básicas del marketplace (dashboard)
-router.get('/dashboard', authenticateToken, isAdmin, (req, res) => {
+router.get('/dashboard', authenticateToken, isAdmin, async (req, res) => {
   try {
     // Obtener todos los usuarios
-    const users = database.users.getAll();
+    const users = await database.users.getAll();
     
     // Obtener todos los productos activos
-    const products = database.products.getAll();
+    const products = await database.products.getAll();
     const activeProducts = products.filter(p => p.isActive);
     
     // Obtener todas las órdenes
-    const orders = database.orders.getAll();
+    const orders = await database.orders.getAll();
     const pendingOrders = orders.filter(o => o.status === 'pending');
     const deliveredOrders = orders.filter(o => o.status === 'delivered');
     
@@ -63,9 +63,9 @@ router.get('/dashboard', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Obtener todos los usuarios (solo admin)
-router.get('/users', authenticateToken, isAdmin, (req, res) => {
+router.get('/users', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const users = database.users.getAll();
+    const users = await database.users.getAll();
     
     // No devolver las contraseñas
     const usersWithoutPasswords = users.map(user => {
@@ -87,7 +87,7 @@ router.get('/users', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Ticket 14: Suspender o rehabilitar un usuario
-router.put('/users/:id/status', authenticateToken, isAdmin, (req, res) => {
+router.put('/users/:id/status', authenticateToken, isAdmin, async (req, res) => {
   try {
     const { status } = req.body;
 
@@ -97,7 +97,7 @@ router.put('/users/:id/status', authenticateToken, isAdmin, (req, res) => {
       });
     }
 
-    const user = database.users.findById(req.params.id);
+    const user = await database.users.findById(req.params.id);
 
     if (!user) {
       return res.status(404).json({
@@ -105,7 +105,7 @@ router.put('/users/:id/status', authenticateToken, isAdmin, (req, res) => {
       });
     }
 
-    const updatedUser = database.users.update(req.params.id, { status });
+    const updatedUser = await database.users.update(req.params.id, { status });
     const { password: _, ...userWithoutPassword } = updatedUser;
 
     res.json({
@@ -122,9 +122,9 @@ router.put('/users/:id/status', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Obtener todos los productos (solo admin)
-router.get('/products', authenticateToken, isAdmin, (req, res) => {
+router.get('/products', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const products = database.products.getAll();
+    const products = await database.products.getAll();
 
     res.json({ 
       count: products.length,
@@ -140,9 +140,9 @@ router.get('/products', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Obtener todas las órdenes (solo admin)
-router.get('/orders', authenticateToken, isAdmin, (req, res) => {
+router.get('/orders', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const orders = database.orders.getAll();
+    const orders = await database.orders.getAll();
 
     res.json({ 
       count: orders.length,
@@ -158,9 +158,9 @@ router.get('/orders', authenticateToken, isAdmin, (req, res) => {
 });
 
 // Ticket 13: Eliminar un producto como administrador (soft delete — isActive: false)
-router.delete('/products/:id', authenticateToken, isAdmin, (req, res) => {
+router.delete('/products/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const product = database.products.findById(req.params.id);
+    const product = await database.products.findById(req.params.id);
 
     if (!product) {
       return res.status(404).json({
@@ -168,7 +168,7 @@ router.delete('/products/:id', authenticateToken, isAdmin, (req, res) => {
       });
     }
 
-    database.products.update(req.params.id, { isActive: false });
+    await database.products.update(req.params.id, { isActive: false });
 
     res.json({
       message: 'Producto eliminado por administrador.',
@@ -191,7 +191,8 @@ router.post('/create-admin', async (req, res) => {
     const { email, password, name } = req.body;
 
     // Verificar si ya existe un admin
-    const existingAdmin = database.users.getAll().find(u => u.roles.includes('admin'));
+    const allUsers = await database.users.getAll();
+    const existingAdmin = allUsers.find(u => u.roles.includes('admin'));
     
     if (existingAdmin) {
       return res.status(400).json({ 
@@ -217,7 +218,7 @@ router.post('/create-admin', async (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    database.users.create(admin);
+    await database.users.create(admin);
 
     const { password: _, ...adminWithoutPassword } = admin;
 
@@ -235,9 +236,9 @@ router.post('/create-admin', async (req, res) => {
 });
 
 // Ticket 16: Ver todos los reportes (admin) y resolver un reporte
-router.get('/reports', authenticateToken, isAdmin, (req, res) => {
+router.get('/reports', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const reports = database.reports.getAll();
+    const reports = await database.reports.getAll();
     res.json({ reports });
   } catch (error) {
     console.error('Error al obtener reportes:', error);
@@ -245,15 +246,15 @@ router.get('/reports', authenticateToken, isAdmin, (req, res) => {
   }
 });
 
-router.put('/reports/:id/resolve', authenticateToken, isAdmin, (req, res) => {
+router.put('/reports/:id/resolve', authenticateToken, isAdmin, async (req, res) => {
   try {
-    const report = database.reports.findById(req.params.id);
+    const report = await database.reports.findById(req.params.id);
 
     if (!report) {
       return res.status(404).json({ error: 'Reporte no encontrado.' });
     }
 
-    const updatedReport = database.reports.update(req.params.id, {
+    const updatedReport = await database.reports.update(req.params.id, {
       status: 'resolved',
       resolvedAt: new Date().toISOString()
     });

@@ -8,9 +8,9 @@ const { createNotification, NotificationTypes } = require('../utils/notification
 const router = express.Router();
 
 // Ticket 31: Generación de órdenes y ciclo de vida de la venta (crear orden)
-router.post('/create', authenticateToken, (req, res) => {
+router.post('/create', authenticateToken, async (req, res) => {
   try {
-    const cart = database.carts.findByUser(req.user.id);
+    const cart = await database.carts.findByUser(req.user.id);
 
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ 
@@ -22,7 +22,7 @@ router.post('/create', authenticateToken, (req, res) => {
     const ordersBySeller = {};
 
     for (const item of cart.items) {
-      const product = database.products.findById(item.productId);
+      const product = await database.products.findById(item.productId);
 
       if (!product || !product.isActive) {
         return res.status(400).json({ 
@@ -66,14 +66,14 @@ router.post('/create', authenticateToken, (req, res) => {
         deliveredAt: null
       };
 
-      database.orders.create(order);
+      await database.orders.create(order);
       createdOrders.push(order);
 
       // Reducir stock de los productos
       for (const item of items) {
-        const product = database.products.findById(item.productId);
+        const product = await database.products.findById(item.productId);
         const newStock = product.stock - item.quantity;
-        database.products.update(item.productId, { stock: newStock });
+        await database.products.update(item.productId, { stock: newStock });
       }
 
       // Crear notificación para el vendedor
@@ -86,7 +86,7 @@ router.post('/create', authenticateToken, (req, res) => {
     }
 
     // Vaciar el carrito
-    database.carts.update(req.user.id, { items: [], updatedAt: new Date().toISOString() });
+    await database.carts.update(req.user.id, { items: [], updatedAt: new Date().toISOString() });
 
     res.status(201).json({ 
       message: 'Órdenes creadas exitosamente.',
@@ -102,9 +102,9 @@ router.post('/create', authenticateToken, (req, res) => {
 });
 
 // Ticket 31 (parte 2): Generación de órdenes — marcar como entregada (vendedor)
-router.patch('/:id/deliver', authenticateToken, (req, res) => {
+router.patch('/:id/deliver', authenticateToken, async (req, res) => {
   try {
-    const order = database.orders.findById(req.params.id);
+    const order = await database.orders.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({ 
@@ -126,7 +126,7 @@ router.patch('/:id/deliver', authenticateToken, (req, res) => {
     }
 
     // Actualizar el estado de la orden
-    const updatedOrder = database.orders.update(req.params.id, {
+    const updatedOrder = await database.orders.update(req.params.id, {
       status: 'delivered',
       deliveredAt: new Date().toISOString()
     });
@@ -153,30 +153,30 @@ router.patch('/:id/deliver', authenticateToken, (req, res) => {
 });
 
 // Obtener órdenes del usuario (como comprador y vendedor)
-router.get('/my-orders', authenticateToken, (req, res) => {
+router.get('/my-orders', authenticateToken, async (req, res) => {
   try {
     // Órdenes como comprador
-    const purchases = database.orders.findByBuyer(req.user.id);
+    const purchases = await database.orders.findByBuyer(req.user.id);
     
     // Órdenes como vendedor
-    const sales = database.orders.findBySeller(req.user.id);
+    const sales = await database.orders.findBySeller(req.user.id);
 
     // Agregar información adicional
-    const purchasesWithDetails = purchases.map(order => {
-      const seller = database.users.findById(order.sellerId);
+    const purchasesWithDetails = await Promise.all(purchases.map(async (order) => {
+      const seller = await database.users.findById(order.sellerId);
       return {
         ...order,
         seller: seller ? { id: seller.id, name: seller.name, email: seller.email } : null
       };
-    });
+    }));
 
-    const salesWithDetails = sales.map(order => {
-      const buyer = database.users.findById(order.buyerId);
+    const salesWithDetails = await Promise.all(sales.map(async (order) => {
+      const buyer = await database.users.findById(order.buyerId);
       return {
         ...order,
         buyer: buyer ? { id: buyer.id, name: buyer.name, email: buyer.email } : null
       };
-    });
+    }));
 
     res.json({ 
       purchases: purchasesWithDetails,
@@ -192,9 +192,9 @@ router.get('/my-orders', authenticateToken, (req, res) => {
 });
 
 // Obtener una orden específica
-router.get('/:id', authenticateToken, (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const order = database.orders.findById(req.params.id);
+    const order = await database.orders.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({ 
@@ -210,8 +210,8 @@ router.get('/:id', authenticateToken, (req, res) => {
     }
 
     // Agregar información del comprador y vendedor
-    const buyer = database.users.findById(order.buyerId);
-    const seller = database.users.findById(order.sellerId);
+    const buyer = await database.users.findById(order.buyerId);
+    const seller = await database.users.findById(order.sellerId);
 
     const orderWithDetails = {
       ...order,
@@ -230,9 +230,9 @@ router.get('/:id', authenticateToken, (req, res) => {
 });
 
 // Cancelar una orden (solo si está pendiente y el usuario es el comprador)
-router.patch('/:id/cancel', authenticateToken, (req, res) => {
+router.patch('/:id/cancel', authenticateToken, async (req, res) => {
   try {
-    const order = database.orders.findById(req.params.id);
+    const order = await database.orders.findById(req.params.id);
 
     if (!order) {
       return res.status(404).json({ 
@@ -254,14 +254,14 @@ router.patch('/:id/cancel', authenticateToken, (req, res) => {
 
     // Devolver el stock
     for (const item of order.items) {
-      const product = database.products.findById(item.productId);
+      const product = await database.products.findById(item.productId);
       if (product) {
         const newStock = product.stock + item.quantity;
-        database.products.update(item.productId, { stock: newStock });
+        await database.products.update(item.productId, { stock: newStock });
       }
     }
 
-    const updatedOrder = database.orders.update(req.params.id, {
+    const updatedOrder = await database.orders.update(req.params.id, {
       status: 'cancelled'
     });
 

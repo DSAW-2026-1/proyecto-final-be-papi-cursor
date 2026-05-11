@@ -7,7 +7,7 @@ const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
 // Ticket 15: Reportar un producto o perfil de usuario
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { targetType, targetId, reason } = req.body;
 
@@ -33,7 +33,7 @@ router.post('/', authenticateToken, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    database.reports.create(report);
+    await database.reports.create(report);
 
     res.status(201).json({
       message: 'Reporte enviado exitosamente.',

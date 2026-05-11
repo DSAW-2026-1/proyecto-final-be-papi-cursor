@@ -8,7 +8,7 @@ const { createNotification, NotificationTypes } = require('../utils/notification
 const router = express.Router();
 
 // Ticket 8: Dejar una reseña a un vendedor tras una compra
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { sellerId, orderId, rating, comment } = req.body;
 
@@ -27,7 +27,7 @@ router.post('/', authenticateToken, (req, res) => {
     }
 
     // Verificar que la orden exista
-    const order = database.orders.findById(orderId);
+    const order = await database.orders.findById(orderId);
     
     if (!order) {
       return res.status(404).json({ 
@@ -57,7 +57,7 @@ router.post('/', authenticateToken, (req, res) => {
     }
 
     // Verificar que no exista ya una reseña para esta orden
-    const existingReview = database.reviews.findByOrder(orderId);
+    const existingReview = await database.reviews.findByOrder(orderId);
     
     if (existingReview) {
       return res.status(400).json({ 
@@ -76,7 +76,7 @@ router.post('/', authenticateToken, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    database.reviews.create(review);
+    await database.reviews.create(review);
 
     // Notificar al vendedor
     createNotification({
@@ -100,7 +100,7 @@ router.post('/', authenticateToken, (req, res) => {
 });
 
 // Ticket 9: Ver las reseñas de un vendedor y su promedio
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { sellerId } = req.query;
 
@@ -111,7 +111,7 @@ router.get('/', (req, res) => {
     }
 
     // Obtener todas las reseñas del vendedor
-    const reviews = database.reviews.findBySeller(sellerId);
+    const reviews = await database.reviews.findBySeller(sellerId);
 
     // Calcular el promedio
     const average = reviews.length > 0
@@ -119,8 +119,8 @@ router.get('/', (req, res) => {
       : 0;
 
     // Agregar información del comprador
-    const reviewsWithBuyer = reviews.map(review => {
-      const buyer = database.users.findById(review.buyerId);
+    const reviewsWithBuyer = await Promise.all(reviews.map(async (review) => {
+      const buyer = await database.users.findById(review.buyerId);
       return {
         ...review,
         buyer: buyer ? {
@@ -128,7 +128,7 @@ router.get('/', (req, res) => {
           name: buyer.name
         } : null
       };
-    });
+    }));
 
     res.json({ 
       sellerId,
@@ -146,20 +146,19 @@ router.get('/', (req, res) => {
 });
 
 // Obtener una reseña específica
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const reviews = database.reviews.findBySeller('all');
-    const review = reviews.find(r => r.id === req.params.id);
+    const review = await database.reviews.findById(req.params.id);
 
     if (!review) {
-      return res.status(404).json({ 
-        error: 'Reseña no encontrada.' 
+      return res.status(404).json({
+        error: 'Reseña no encontrada.'
       });
     }
 
     // Agregar información del comprador y vendedor
-    const buyer = database.users.findById(review.buyerId);
-    const seller = database.users.findById(review.sellerId);
+    const buyer = await database.users.findById(review.buyerId);
+    const seller = await database.users.findById(review.sellerId);
 
     const reviewWithDetails = {
       ...review,

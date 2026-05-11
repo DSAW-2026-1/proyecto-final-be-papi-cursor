@@ -8,7 +8,7 @@ const { createNotification, NotificationTypes } = require('../utils/notification
 const router = express.Router();
 
 // Ticket 4: Crear una conversación entre comprador y vendedor
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const { productId } = req.body;
 
@@ -19,7 +19,7 @@ router.post('/', authenticateToken, (req, res) => {
     }
 
     // Verificar que el producto exista
-    const product = database.products.findById(productId);
+    const product = await database.products.findById(productId);
     
     if (!product || !product.isActive) {
       return res.status(404).json({ 
@@ -35,7 +35,7 @@ router.post('/', authenticateToken, (req, res) => {
     }
 
     // Verificar si ya existe una conversación entre estos usuarios para este producto
-    const existingConversation = database.conversations.findByUsers(req.user.id, product.sellerId);
+    const existingConversation = await database.conversations.findByUsers(req.user.id, product.sellerId);
     
     if (existingConversation && existingConversation.productId === productId) {
       return res.json({ 
@@ -54,7 +54,7 @@ router.post('/', authenticateToken, (req, res) => {
       lastMessageAt: new Date().toISOString()
     };
 
-    database.conversations.create(conversation);
+    await database.conversations.create(conversation);
 
     res.status(201).json({ 
       message: 'Conversación creada exitosamente.',
@@ -70,19 +70,19 @@ router.post('/', authenticateToken, (req, res) => {
 });
 
 // Obtener todas las conversaciones del usuario
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const conversations = database.conversations.findByUser(req.user.id);
+    const conversations = await database.conversations.findByUser(req.user.id);
 
     // Agregar información adicional
-    const conversationsWithDetails = conversations.map(conv => {
-      const product = database.products.findById(conv.productId);
-      const otherUser = database.users.findById(
+    const conversationsWithDetails = await Promise.all(conversations.map(async (conv) => {
+      const product = await database.products.findById(conv.productId);
+      const otherUser = await database.users.findById(
         conv.buyerId === req.user.id ? conv.sellerId : conv.buyerId
       );
       
       // Obtener el último mensaje
-      const messages = database.messages.findByConversation(conv.id);
+      const messages = await database.messages.findByConversation(conv.id);
       const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
       return {
@@ -99,11 +99,11 @@ router.get('/', authenticateToken, (req, res) => {
         lastMessage,
         unreadCount: messages.filter(m => !m.read && m.senderId !== req.user.id).length
       };
-    });
+    }));
 
-    res.json({ 
+    res.json({
       count: conversationsWithDetails.length,
-      conversations: conversationsWithDetails 
+      conversations: conversationsWithDetails
     });
 
   } catch (error) {
@@ -115,9 +115,9 @@ router.get('/', authenticateToken, (req, res) => {
 });
 
 // Obtener una conversación específica con sus mensajes
-router.get('/:id', authenticateToken, (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const conversation = database.conversations.findById(req.params.id);
+    const conversation = await database.conversations.findById(req.params.id);
 
     if (!conversation) {
       return res.status(404).json({ 
@@ -133,19 +133,19 @@ router.get('/:id', authenticateToken, (req, res) => {
     }
 
     // Obtener mensajes
-    const messages = database.messages.findByConversation(req.params.id);
+    const messages = await database.messages.findByConversation(req.params.id);
 
     // Marcar mensajes como leídos
-    messages.forEach(message => {
+    for (const message of messages) {
       if (message.senderId !== req.user.id && !message.read) {
-        database.messages.update(message.id, { read: true });
+        await database.messages.update(message.id, { read: true });
       }
-    });
+    }
 
     // Agregar información del producto y usuarios
-    const product = database.products.findById(conversation.productId);
-    const buyer = database.users.findById(conversation.buyerId);
-    const seller = database.users.findById(conversation.sellerId);
+    const product = await database.products.findById(conversation.productId);
+    const buyer = await database.users.findById(conversation.buyerId);
+    const seller = await database.users.findById(conversation.sellerId);
 
     const conversationWithDetails = {
       ...conversation,
@@ -166,7 +166,7 @@ router.get('/:id', authenticateToken, (req, res) => {
 });
 
 // Enviar un mensaje en una conversación
-router.post('/:id/messages', authenticateToken, (req, res) => {
+router.post('/:id/messages', authenticateToken, async (req, res) => {
   try {
     const { content } = req.body;
 
@@ -176,7 +176,7 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
       });
     }
 
-    const conversation = database.conversations.findById(req.params.id);
+    const conversation = await database.conversations.findById(req.params.id);
 
     if (!conversation) {
       return res.status(404).json({ 
@@ -201,10 +201,10 @@ router.post('/:id/messages', authenticateToken, (req, res) => {
       createdAt: new Date().toISOString()
     };
 
-    database.messages.create(message);
+    await database.messages.create(message);
 
     // Actualizar última actividad de la conversación
-    database.conversations.update(req.params.id, {
+    await database.conversations.update(req.params.id, {
       lastMessageAt: new Date().toISOString()
     });
 

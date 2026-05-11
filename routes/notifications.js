@@ -6,9 +6,9 @@ const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
 // Ticket 11: Listar y marcar notificaciones como leídas (listar)
-router.get('/', authenticateToken, (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
-    const notifications = database.notifications.findByUser(req.user.id);
+    const notifications = await database.notifications.findByUser(req.user.id);
 
     // Ordenar por fecha (más recientes primero)
     notifications.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -31,9 +31,9 @@ router.get('/', authenticateToken, (req, res) => {
 });
 
 // Marcar una notificación como leída
-router.patch('/:id/read', authenticateToken, (req, res) => {
+router.patch('/:id/read', authenticateToken, async (req, res) => {
   try {
-    const notifications = database.notifications.findByUser(req.user.id);
+    const notifications = await database.notifications.findByUser(req.user.id);
     const notification = notifications.find(n => n.id === req.params.id);
 
     if (!notification) {
@@ -49,7 +49,7 @@ router.patch('/:id/read', authenticateToken, (req, res) => {
       });
     }
 
-    const updatedNotification = database.notifications.update(req.params.id, { read: true });
+    const updatedNotification = await database.notifications.update(req.params.id, { read: true });
 
     res.json({ 
       message: 'Notificación marcada como leída.',
@@ -65,15 +65,15 @@ router.patch('/:id/read', authenticateToken, (req, res) => {
 });
 
 // Marcar todas las notificaciones como leídas
-router.patch('/read-all', authenticateToken, (req, res) => {
+router.patch('/read-all', authenticateToken, async (req, res) => {
   try {
-    const notifications = database.notifications.findByUser(req.user.id);
+    const notifications = await database.notifications.findByUser(req.user.id);
 
-    notifications.forEach(notification => {
+    for (const notification of notifications) {
       if (!notification.read) {
-        database.notifications.update(notification.id, { read: true });
+        await database.notifications.update(notification.id, { read: true });
       }
-    });
+    }
 
     res.json({ 
       message: 'Todas las notificaciones marcadas como leídas.',
@@ -89,9 +89,9 @@ router.patch('/read-all', authenticateToken, (req, res) => {
 });
 
 // Eliminar una notificación
-router.delete('/:id', authenticateToken, (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    const notifications = database.notifications.findByUser(req.user.id);
+    const notifications = await database.notifications.findByUser(req.user.id);
     const notification = notifications.find(n => n.id === req.params.id);
 
     if (!notification) {
@@ -109,7 +109,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
 
     // En nuestra implementación en memoria, simplemente la marcamos como eliminada
     // En una BD real, usarías un DELETE
-    database.notifications.update(req.params.id, { deleted: true });
+    await database.notifications.update(req.params.id, { deleted: true });
 
     res.json({ 
       message: 'Notificación eliminada exitosamente.'
