@@ -12,7 +12,7 @@ async function seed() {
       DELETE FROM reports; DELETE FROM notifications; DELETE FROM reviews;
       DELETE FROM messages; DELETE FROM conversations; DELETE FROM orders;
       DELETE FROM carts; DELETE FROM products;
-      DELETE FROM users WHERE email IN ('comprador@unisabana.edu.co','vendedor@unisabana.edu.co');
+      DELETE FROM users WHERE email IN ('comprador@unisabana.edu.co','vendedor@unisabana.edu.co','admin@unisabana.edu.co');
     `);
 
     // ── Usuario comprador ─────────────────────────────────────────────
@@ -49,11 +49,21 @@ async function seed() {
     );
     console.log('✅ Producto creado:', productResult.rows[0].name, '| stock:', productResult.rows[0].stock);
 
+    // ── Usuario admin ─────────────────────────────────────────────────
+    const adminPassword = await bcrypt.hash('admin123', 10);
+    const adminResult = await client.query(
+      `INSERT INTO users (email, password, name, roles, status)
+       VALUES ($1, $2, $3, $4, 'active') RETURNING *`,
+      ['admin@unisabana.edu.co', adminPassword, 'Administrador', ['admin', 'buyer', 'seller']]
+    );
+    console.log('✅ Admin creado:', adminResult.rows[0].email);
+
     await client.query('COMMIT');
     console.log('\n✅ Seed completado exitosamente.');
     console.log('─────────────────────────────────────');
     console.log('Comprador  → comprador@unisabana.edu.co / comprador123');
     console.log('Vendedor   → vendedor@unisabana.edu.co  / vendedor123');
+    console.log('Admin      → admin@unisabana.edu.co     / admin123');
     console.log('─────────────────────────────────────');
   } catch (err) {
     await client.query('ROLLBACK');

@@ -36,6 +36,8 @@ const COL = {
   reportedBy:             'reported_by',
   targetType:             'target_type',
   targetId:               'target_id',
+  suspendedUntil:         'suspended_until',
+  hidden:                 'hidden',
 };
 
 const buildSet = (updates, offset = 1) => {
@@ -78,6 +80,16 @@ const database = {
         `UPDATE users SET ${clause} WHERE id = $${values.length + 1} RETURNING *`,
         [...values, id]
       );
+      return row(r);
+    },
+    delete: async (id) => {
+      // Elimina registros dependientes primero para evitar FK violations
+      await pool.query('DELETE FROM orders WHERE buyer_id=$1 OR seller_id=$1', [id]);
+      await pool.query('DELETE FROM carts WHERE user_id=$1', [id]);
+      await pool.query('DELETE FROM notifications WHERE user_id=$1', [id]);
+      await pool.query('DELETE FROM reports WHERE reported_by=$1', [id]);
+      await pool.query('DELETE FROM messages WHERE sender_id=$1', [id]);
+      const r = await pool.query('DELETE FROM users WHERE id=$1 RETURNING *', [id]);
       return row(r);
     }
   },

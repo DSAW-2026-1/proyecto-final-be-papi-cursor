@@ -2,13 +2,13 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 // ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, checkSuspension } = require('../middleware/auth');
 const { createNotification, NotificationTypes } = require('../utils/notifications');
 
 const router = express.Router();
 
 // Ticket 31: Generación de órdenes y ciclo de vida de la venta (crear orden)
-router.post('/create', authenticateToken, async (req, res) => {
+router.post('/create', authenticateToken, checkSuspension, async (req, res) => {
   try {
     const cart = await database.carts.findByUser(req.user.id);
 

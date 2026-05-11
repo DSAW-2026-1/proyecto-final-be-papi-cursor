@@ -72,8 +72,35 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
+// Middleware para verificar que el usuario no esté suspendido
+// Usar en rutas de compra/venta
+const checkSuspension = async (req, res, next) => {
+  try {
+    const database = require('../database');
+    const user = await database.users.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
+      const fecha = new Date(user.suspendedUntil).toLocaleDateString('es-CO', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+      return res.status(403).json({ error: `Cuenta suspendida hasta ${fecha}.` });
+    }
+
+    // Si ya pasó la suspensión, limpiar automáticamente
+    if (user.status === 'suspended' && user.suspendedUntil && new Date(user.suspendedUntil) <= new Date()) {
+      await database.users.update(req.user.id, { status: 'active', suspendedUntil: null });
+    }
+
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 module.exports = {
   authenticateToken,
   authorizeRole,
-  isAdmin
+  isAdmin,
+  checkSuspension
 };

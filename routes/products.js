@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
   try {
     const { search, minPrice, maxPrice, sellerId } = req.query;
     
-    let products = (await database.products.getAll()).filter(p => p.isActive);
+    let products = (await database.products.getAll()).filter(p => p.isActive && !p.hidden);
 
     // Filtrar por búsqueda
     if (search) {

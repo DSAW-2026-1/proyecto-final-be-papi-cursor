@@ -20,6 +20,15 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    // Bloquear intento de registrar admin desde endpoint público
+    if (email && email.toLowerCase().includes('admin')) {
+      // Verificación extra: si el body pide explícitamente rol admin
+    }
+    // El rol admin NUNCA se asigna desde registro público
+    if (req.body.roles && req.body.roles.includes('admin')) {
+      return res.status(403).json({ error: 'Forbidden.' });
+    }
+
     // Validar correo institucional
     // Debe tener al menos 5 caracteres antes del @ y terminar en @unisabana.edu.co
     const emailRegex = /^[a-zA-Z0-9._-]{5,}@unisabana\.edu\.co$/;
@@ -175,6 +184,34 @@ router.post('/become-seller', authenticateToken, async (req, res) => {
     message: 'Ahora eres un vendedor.',
     user: userWithoutPassword
   });
+});
+
+// POST /auth/admin-login — login exclusivo para administradores
+router.post('/admin-login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Por favor proporciona email y contraseña.' });
+    }
+    const user = await database.users.findByEmail(email);
+    if (!user || !user.roles.includes('admin')) {
+      return res.status(401).json({ error: 'Credenciales inválidas o sin permisos de administrador.' });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Credenciales inválidas o sin permisos de administrador.' });
+    }
+    const token = jwt.sign(
+      { id: user.id, email: user.email, roles: user.roles },
+      process.env.JWT_SECRET || 'unisabana-marketplace-secret-2026',
+      { expiresIn: '8h' }
+    );
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ message: 'Inicio de sesión de administrador exitoso.', token, user: userWithoutPassword });
+  } catch (error) {
+    console.error('Error en admin-login:', error);
+    res.status(500).json({ error: 'Error al iniciar sesión.' });
+  }
 });
 
 // Ruta para quitar el rol de vendedor

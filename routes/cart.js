@@ -2,7 +2,7 @@ const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 // ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, checkSuspension } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -51,7 +51,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Agregar producto al carrito
-router.post('/add', authenticateToken, async (req, res) => {
+router.post('/add', authenticateToken, checkSuspension, async (req, res) => {
   try {
     const { productId, quantity = 1 } = req.body;
 
