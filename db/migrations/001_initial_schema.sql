@@ -113,6 +113,6 @@ CREATE INDEX IF NOT EXISTS idx_orders_buyer       ON orders(buyer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_seller      ON orders(seller_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conv      ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_reviews_seller     ON reviews(seller_id);
+-- idx_reviews_seller eliminado: la columna seller_id fue removida en migración 003
 
 -- ✅ db/migrations/001_initial_schema.sql — completado

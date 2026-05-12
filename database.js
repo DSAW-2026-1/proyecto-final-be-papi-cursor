@@ -111,11 +111,15 @@ const database = {
     },
     create: async (product) => {
       const r = await pool.query(
-        `INSERT INTO products (id, seller_id, name, description, price, stock, is_active, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        `INSERT INTO products
+           (id, seller_id, name, description, price, stock, is_active,
+            image, category, condition, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
         [product.id, product.sellerId, product.name, product.description,
          product.price, product.stock ?? 0, product.isActive ?? true,
-         product.createdAt || new Date()]
+         product.image || null, product.category || null,
+         product.condition || null,
+         product.createdAt || new Date(), new Date()]
       );
       return row(r);
     },

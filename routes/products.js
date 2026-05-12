@@ -9,26 +9,26 @@ const router = express.Router();
 // Ticket 24: Publicar un nuevo artículo en la tienda
 router.post('/', authenticateToken, authorizeRole('seller'), async (req, res) => {
   try {
-    const { name, price, description, image, stock } = req.body;
+    const { name, price, description, image, stock, category, condition } = req.body;
 
     // Validar campos requeridos
     if (!name || !price || !description) {
-      return res.status(400).json({ 
-        error: 'Por favor proporciona nombre, precio y descripción del producto.' 
+      return res.status(400).json({
+        error: 'Por favor proporciona nombre, precio y descripción del producto.'
       });
     }
 
     // Validar precio
     if (price <= 0) {
-      return res.status(400).json({ 
-        error: 'El precio debe ser mayor a 0.' 
+      return res.status(400).json({
+        error: 'El precio debe ser mayor a 0.'
       });
     }
 
     // Verificar que el usuario tenga rol de vendedor
     if (!req.user.roles.includes('seller')) {
-      return res.status(403).json({ 
-        error: 'Debes ser vendedor para publicar productos.' 
+      return res.status(403).json({
+        error: 'Debes ser vendedor para publicar productos.'
       });
     }
 
@@ -40,6 +40,8 @@ router.post('/', authenticateToken, authorizeRole('seller'), async (req, res) =>
       price: parseFloat(price),
       description,
       image: image || null,
+      category: category || null,
+      condition: condition || null,
       stock: stock || 1,
       isActive: true,
       createdAt: new Date().toISOString(),
@@ -169,12 +171,12 @@ router.put('/:id', authenticateToken, authorizeRole('seller'), async (req, res) 
       });
     }
 
-    const { name, price, description, image, stock, isActive } = req.body;
+    const { name, price, description, image, stock, isActive, category, condition } = req.body;
 
     // Validar precio si se proporciona
     if (price !== undefined && price <= 0) {
-      return res.status(400).json({ 
-        error: 'El precio debe ser mayor a 0.' 
+      return res.status(400).json({
+        error: 'El precio debe ser mayor a 0.'
       });
     }
 
@@ -189,6 +191,8 @@ router.put('/:id', authenticateToken, authorizeRole('seller'), async (req, res) 
     if (image !== undefined) updates.image = image;
     if (stock !== undefined) updates.stock = parseInt(stock);
     if (isActive !== undefined) updates.isActive = isActive;
+    if (category !== undefined) updates.category = category;
+    if (condition !== undefined) updates.condition = condition;
 
     const updatedProduct = await database.products.update(req.params.id, updates);
 
