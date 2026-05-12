@@ -32,6 +32,7 @@ const COL = {
   resolvedAt:             'resolved_at',
   sellerConfirmedPayment: 'seller_confirmed_payment',
   buyerConfirmedReceipt:  'buyer_confirmed_receipt',
+  deliveredAt:            'delivered_at',
   createdAt:              'created_at',
   userId:                 'user_id',
   reportedBy:             'reported_by',
