@@ -4,13 +4,20 @@ const path = require('path');
 const pool = require('./connection');
 
 async function migrate() {
-  const sql = fs.readFileSync(
-    path.join(__dirname, 'migrations', '001_initial_schema.sql'), 'utf8'
-  );
+  const migrationsDir = path.join(__dirname, 'migrations');
+  const files = fs.readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql'))
+    .sort(); // orden alfabético: 001, 002, ...
+
   const client = await pool.connect();
   try {
-    await client.query(sql);
-    console.log('✅ Migración ejecutada correctamente.');
+    for (const file of files) {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      console.log(`⏳ Ejecutando ${file}...`);
+      await client.query(sql);
+      console.log(`✅ ${file} — completado`);
+    }
+    console.log('\n✅ Todas las migraciones ejecutadas correctamente.');
   } catch (err) {
     console.error('❌ Error en migración:', err.message);
     throw err;
