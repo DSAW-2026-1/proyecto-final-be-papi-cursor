@@ -165,6 +165,35 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// Obtener mensajes de una conversación (endpoint independiente)
+router.get('/:id/messages', authenticateToken, async (req, res) => {
+  try {
+    const conversation = await database.conversations.findById(req.params.id);
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversación no encontrada.' });
+    }
+
+    if (conversation.buyerId !== req.user.id && conversation.sellerId !== req.user.id) {
+      return res.status(403).json({ error: 'No tienes permiso para ver esta conversación.' });
+    }
+
+    const messages = await database.messages.findByConversation(req.params.id);
+
+    // Marcar como leídos
+    for (const message of messages) {
+      if (message.senderId !== req.user.id && !message.read) {
+        await database.messages.update(message.id, { read: true });
+      }
+    }
+
+    res.json({ messages });
+  } catch (error) {
+    console.error('Error al obtener mensajes:', error);
+    res.status(500).json({ error: 'Error al obtener los mensajes.' });
+  }
+});
+
 // Enviar un mensaje en una conversación
 router.post('/:id/messages', authenticateToken, async (req, res) => {
   try {
@@ -220,9 +249,9 @@ router.post('/:id/messages', authenticateToken, async (req, res) => {
       relatedId: conversation.id
     });
 
-    res.status(201).json({ 
-      message: 'Mensaje enviado exitosamente.',
-      data: message
+    res.status(201).json({
+      success: true,
+      message  // objeto del mensaje
     });
 
   } catch (error) {
