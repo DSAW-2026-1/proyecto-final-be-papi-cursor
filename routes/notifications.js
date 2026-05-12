@@ -31,7 +31,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Marcar una notificación como leída
-router.patch('/:id/read', authenticateToken, async (req, res) => {
+router.put('/:id/read', authenticateToken, async (req, res) => {
   try {
     const notifications = await database.notifications.findByUser(req.user.id);
     const notification = notifications.find(n => n.id === req.params.id);
@@ -65,26 +65,13 @@ router.patch('/:id/read', authenticateToken, async (req, res) => {
 });
 
 // Marcar todas las notificaciones como leídas
-router.patch('/read-all', authenticateToken, async (req, res) => {
+router.put('/read-all', authenticateToken, async (req, res) => {
   try {
-    const notifications = await database.notifications.findByUser(req.user.id);
-
-    for (const notification of notifications) {
-      if (!notification.read) {
-        await database.notifications.update(notification.id, { read: true });
-      }
-    }
-
-    res.json({ 
-      message: 'Todas las notificaciones marcadas como leídas.',
-      count: notifications.length
-    });
-
+    await database.notifications.markAllRead(req.user.id);
+    res.json({ message: 'Todas las notificaciones marcadas como leídas.' });
   } catch (error) {
     console.error('Error al marcar notificaciones:', error);
-    res.status(500).json({ 
-      error: 'Error al marcar las notificaciones.' 
-    });
+    res.status(500).json({ error: 'Error al marcar las notificaciones.' });
   }
 });
 

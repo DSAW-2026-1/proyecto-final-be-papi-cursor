@@ -398,6 +398,12 @@ const database = {
         [...values, id]
       );
       return row(r);
+    },
+    markAllRead: async (userId) => {
+      await pool.query(
+        `UPDATE notifications SET read = true WHERE user_id = $1 AND read = false`,
+        [userId]
+      );
     }
   },
 
