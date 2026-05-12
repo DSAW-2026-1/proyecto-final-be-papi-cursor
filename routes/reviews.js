@@ -1,179 +1,67 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
-const { authenticateToken } = require('../middleware/auth');
-const { createNotification, NotificationTypes } = require('../utils/notifications');
 
 const router = express.Router();
 
-// Ticket 8: Dejar una reseña a un vendedor tras una compra
-router.post('/', authenticateToken, async (req, res) => {
-  try {
-    const { sellerId, orderId, rating, comment } = req.body;
-
-    // Validar campos requeridos
-    if (!sellerId || !orderId || !rating) {
-      return res.status(400).json({ 
-        error: 'Por favor proporciona sellerId, orderId y rating.' 
-      });
-    }
-
-    // Validar rating (1-5)
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ 
-        error: 'La calificación debe estar entre 1 y 5.' 
-      });
-    }
-
-    // Verificar que la orden exista
-    const order = await database.orders.findById(orderId);
-    
-    if (!order) {
-      return res.status(404).json({ 
-        error: 'Orden no encontrada.' 
-      });
-    }
-
-    // Verificar que el usuario sea el comprador de esta orden
-    if (order.buyerId !== req.user.id) {
-      return res.status(403).json({ 
-        error: 'Solo puedes dejar reseñas en órdenes donde fuiste el comprador.' 
-      });
-    }
-
-    // Verificar que la orden esté entregada
-    if (order.status !== 'delivered') {
-      return res.status(400).json({ 
-        error: 'Solo puedes dejar reseñas en órdenes completadas.' 
-      });
-    }
-
-    // Verificar que el vendedor de la orden coincida
-    if (order.sellerId !== sellerId) {
-      return res.status(400).json({ 
-        error: 'El vendedor no coincide con la orden.' 
-      });
-    }
-
-    // Verificar que no exista ya una reseña para esta orden
-    const existingReview = await database.reviews.findByOrder(orderId);
-    
-    if (existingReview) {
-      return res.status(400).json({ 
-        error: 'Ya dejaste una reseña para esta orden.' 
-      });
-    }
-
-    // Crear la reseña
-    const review = {
-      id: uuidv4(),
-      sellerId,
-      buyerId: req.user.id,
-      orderId,
-      rating: parseInt(rating),
-      comment: comment || '',
-      createdAt: new Date().toISOString()
-    };
-
-    await database.reviews.create(review);
-
-    // Notificar al vendedor
-    createNotification({
-      userId: sellerId,
-      type: NotificationTypes.NEW_REVIEW,
-      message: `Recibiste una nueva reseña de ${rating} estrellas`,
-      relatedId: review.id
-    });
-
-    res.status(201).json({ 
-      message: 'Reseña publicada exitosamente.',
-      review
-    });
-
-  } catch (error) {
-    console.error('Error al crear reseña:', error);
-    res.status(500).json({ 
-      error: 'Error al publicar la reseña.' 
-    });
-  }
-});
-
-// Ticket 9: Ver las reseñas de un vendedor y su promedio
+// GET /reviews?sellerId=xxx — reseñas de un vendedor (compatibilidad con frontend existente)
 router.get('/', async (req, res) => {
   try {
     const { sellerId } = req.query;
 
     if (!sellerId) {
-      return res.status(400).json({ 
-        error: 'Por favor proporciona el sellerId.' 
-      });
+      return res.status(400).json({ error: 'Por favor proporciona el sellerId.' });
     }
 
-    // Obtener todas las reseñas del vendedor
     const reviews = await database.reviews.findBySeller(sellerId);
 
-    // Calcular el promedio
-    const average = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 0;
-
-    // Agregar información del comprador
-    const reviewsWithBuyer = await Promise.all(reviews.map(async (review) => {
-      const buyer = await database.users.findById(review.buyerId);
+    const reviewsWithBuyer = await Promise.all(reviews.map(async (rv) => {
+      const buyer = await database.users.findById(rv.buyerId);
       return {
-        ...review,
-        buyer: buyer ? {
-          id: buyer.id,
-          name: buyer.name
-        } : null
+        ...rv,
+        buyer: buyer ? { id: buyer.id, name: buyer.name } : null
       };
     }));
 
-    res.json({ 
+    const sellerRating = await database.reviews.calculateSellerRating(sellerId);
+
+    res.json({
       sellerId,
-      count: reviews.length,
-      average: parseFloat(average.toFixed(2)),
+      count: reviewsWithBuyer.length,
+      sellerRating,  // promedio de las primeras 20 ventas completadas (null si no califica)
       reviews: reviewsWithBuyer
     });
 
   } catch (error) {
     console.error('Error al obtener reseñas:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener las reseñas.' 
-    });
+    res.status(500).json({ error: 'Error al obtener las reseñas.' });
   }
 });
 
-// Obtener una reseña específica
+// GET /reviews/:id — una reseña específica
 router.get('/:id', async (req, res) => {
   try {
     const review = await database.reviews.findById(req.params.id);
-
     if (!review) {
-      return res.status(404).json({
-        error: 'Reseña no encontrada.'
-      });
+      return res.status(404).json({ error: 'Reseña no encontrada.' });
     }
 
-    // Agregar información del comprador y vendedor
-    const buyer = await database.users.findById(review.buyerId);
-    const seller = await database.users.findById(review.sellerId);
+    const buyer   = await database.users.findById(review.buyerId);
+    const product = await database.products.findById(review.productId);
 
-    const reviewWithDetails = {
-      ...review,
-      buyer: buyer ? { id: buyer.id, name: buyer.name } : null,
-      seller: seller ? { id: seller.id, name: seller.name } : null
-    };
-
-    res.json({ review: reviewWithDetails });
+    res.json({
+      review: {
+        ...review,
+        buyer:   buyer   ? { id: buyer.id,   name: buyer.name   } : null,
+        product: product ? { id: product.id, name: product.name } : null
+      }
+    });
 
   } catch (error) {
     console.error('Error al obtener reseña:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener la reseña.' 
-    });
+    res.status(500).json({ error: 'Error al obtener la reseña.' });
   }
 });
 
 module.exports = router;
+
+// ✅ routes/reviews.js — actualizado para esquema v2 (product_id)

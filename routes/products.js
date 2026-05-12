@@ -1,8 +1,8 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { createNotification, NotificationTypes } = require('../utils/notifications');
 
 const router = express.Router();
 
@@ -116,25 +116,28 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Obtener un producto específico
+// Obtener un producto específico (incluye sellerRating — 3B)
 router.get('/:id', async (req, res) => {
   try {
     const product = await database.products.findById(req.params.id);
 
     if (!product) {
-      return res.status(404).json({ 
-        error: 'Producto no encontrado.' 
+      return res.status(404).json({
+        error: 'Producto no encontrado.'
       });
     }
 
-    // Agregar información del vendedor
+    // Agregar información del vendedor + rating promedio (3B)
     const seller = await database.users.findById(product.sellerId);
+    const sellerRating = await database.reviews.calculateSellerRating(product.sellerId);
+
     const productWithSeller = {
       ...product,
       seller: seller ? {
         id: seller.id,
         name: seller.name,
-        email: seller.email
+        email: seller.email,
+        sellerRating  // null si no califica, número si califica
       } : null
     };
 
@@ -142,8 +145,8 @@ router.get('/:id', async (req, res) => {
 
   } catch (error) {
     console.error('Error al obtener producto:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener el producto.' 
+    res.status(500).json({
+      error: 'Error al obtener el producto.'
     });
   }
 });
@@ -250,6 +253,115 @@ router.get('/my/products', authenticateToken, authorizeRole('seller'), async (re
     res.status(500).json({ 
       error: 'Error al obtener tus productos.' 
     });
+  }
+});
+
+// ── 3A: Reseñas por producto ──────────────────────────────────────────────────
+
+// GET /products/:id/reviews — lista pública de reseñas del producto
+router.get('/:id/reviews', async (req, res) => {
+  try {
+    const product = await database.products.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado.' });
+    }
+
+    const reviews = await database.reviews.findByProduct(req.params.id);
+
+    // Enriquecer con nombre del comprador
+    const reviewsWithBuyer = await Promise.all(reviews.map(async (rv) => {
+      const buyer = await database.users.findById(rv.buyerId);
+      return {
+        ...rv,
+        buyer: buyer ? { id: buyer.id, name: buyer.name } : null
+      };
+    }));
+
+    const avg = reviewsWithBuyer.length > 0
+      ? reviewsWithBuyer.reduce((s, r) => s + r.rating, 0) / reviewsWithBuyer.length
+      : null;
+
+    res.json({
+      productId: req.params.id,
+      count: reviewsWithBuyer.length,
+      average: avg !== null ? parseFloat(avg.toFixed(2)) : null,
+      reviews: reviewsWithBuyer
+    });
+
+  } catch (error) {
+    console.error('Error al obtener reseñas:', error);
+    res.status(500).json({ error: 'Error al obtener las reseñas.' });
+  }
+});
+
+// POST /products/:id/reviews — comprador deja reseña (requiere compra completed)
+router.post('/:id/reviews', authenticateToken, async (req, res) => {
+  try {
+    const product = await database.products.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado.' });
+    }
+
+    // El vendedor no puede reseñar su propio producto
+    if (product.sellerId === req.user.id) {
+      return res.status(403).json({ error: 'No puedes reseñar tus propios productos.' });
+    }
+
+    const { rating, comment } = req.body;
+
+    // Validar rating
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'La calificación debe ser un número entre 1 y 5.' });
+    }
+
+    // Verificar que exista una venta completed entre este buyer y este producto
+    const orderId = await database.reviews.findCompletedOrderForProduct(
+      req.user.id,
+      product.sellerId,
+      req.params.id
+    );
+
+    if (!orderId) {
+      return res.status(403).json({
+        error: 'Solo puedes reseñar productos que hayas comprado.'
+      });
+    }
+
+    // Un comprador no puede dejar más de una reseña por producto
+    const existing = await database.reviews.findByBuyerAndProduct(req.user.id, req.params.id);
+    if (existing) {
+      return res.status(400).json({ error: 'Ya dejaste una reseña para este producto.' });
+    }
+
+    // Crear la reseña
+    const review = {
+      id: uuidv4(),
+      productId: req.params.id,
+      buyerId: req.user.id,
+      orderId,
+      rating: parseInt(rating),
+      comment: comment || null,
+      createdAt: new Date().toISOString()
+    };
+
+    await database.reviews.create(review);
+
+    // Notificar al vendedor
+    createNotification({
+      userId: product.sellerId,
+      type: NotificationTypes.NEW_REVIEW,
+      message: `Recibiste una reseña de ${rating} ⭐ en "${product.name}"`,
+      relatedId: review.id
+    });
+
+    res.status(201).json({
+      message: 'Reseña publicada exitosamente.',
+      review
+    });
+
+  } catch (error) {
+    console.error('Error al crear reseña:', error);
+    res.status(500).json({ error: 'Error al publicar la reseña.' });
   }
 });
 

@@ -125,9 +125,10 @@ router.patch('/:id/deliver', authenticateToken, async (req, res) => {
       });
     }
 
-    // Actualizar el estado de la orden
+    // Actualizar el estado de la orden y confirmar pago por parte del vendedor
     const updatedOrder = await database.orders.update(req.params.id, {
       status: 'delivered',
+      sellerConfirmedPayment: true,
       deliveredAt: new Date().toISOString()
     });
 
@@ -226,6 +227,56 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ 
       error: 'Error al obtener la orden.' 
     });
+  }
+});
+
+// Ticket 31: Comprador confirma recepción del producto
+router.patch('/:id/confirm-receipt', authenticateToken, async (req, res) => {
+  try {
+    const order = await database.orders.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ error: 'Orden no encontrada.' });
+    }
+
+    if (order.buyerId !== req.user.id) {
+      return res.status(403).json({ error: 'Solo el comprador puede confirmar la recepción.' });
+    }
+
+    if (order.status === 'cancelled') {
+      return res.status(400).json({ error: 'No se puede confirmar una orden cancelada.' });
+    }
+
+    if (order.buyerConfirmedReceipt) {
+      return res.status(400).json({ error: 'Ya confirmaste la recepción de esta orden.' });
+    }
+
+    // Marcar buyer_confirmed_receipt = true
+    // Si el vendedor ya confirmó pago, la orden pasa a completed
+    const bothConfirmed = order.sellerConfirmedPayment === true;
+    const updatedOrder = await database.orders.update(req.params.id, {
+      buyerConfirmedReceipt: true,
+      ...(bothConfirmed ? { status: 'completed' } : {})
+    });
+
+    // Notificar al vendedor
+    createNotification({
+      userId: order.sellerId,
+      type: NotificationTypes.ORDER_DELIVERED,
+      message: 'El comprador confirmó la recepción de su pedido',
+      relatedId: order.id
+    });
+
+    res.json({
+      message: bothConfirmed
+        ? 'Recepción confirmada. ¡La orden está completa!'
+        : 'Recepción confirmada. Esperando confirmación del vendedor.',
+      order: updatedOrder
+    });
+
+  } catch (error) {
+    console.error('Error al confirmar recepción:', error);
+    res.status(500).json({ error: 'Error al confirmar la recepción.' });
   }
 });
 

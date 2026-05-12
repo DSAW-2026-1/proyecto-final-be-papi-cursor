@@ -24,6 +24,7 @@ const COL = {
   sellerId:               'seller_id',
   buyerId:                'buyer_id',
   productId:              'product_id',
+  orderId:                'order_id',
   conversationId:         'conversation_id',
   senderId:               'sender_id',
   lastMessageAt:          'last_message_at',
@@ -291,22 +292,79 @@ const database = {
       const r = await pool.query('SELECT * FROM reviews WHERE id=$1', [id]);
       return row(r);
     },
-    findBySeller: async (sellerId) => {
-      const r = await pool.query('SELECT * FROM reviews WHERE seller_id=$1', [sellerId]);
+    // Reseñas de un producto específico (público)
+    findByProduct: async (productId) => {
+      const r = await pool.query(
+        'SELECT * FROM reviews WHERE product_id=$1 ORDER BY created_at DESC',
+        [productId]
+      );
       return rows(r);
     },
-    findByOrder: async (orderId) => {
-      const r = await pool.query('SELECT * FROM reviews WHERE order_id=$1', [orderId]);
+    // Verificar si el comprador ya reseñó este producto
+    findByBuyerAndProduct: async (buyerId, productId) => {
+      const r = await pool.query(
+        'SELECT * FROM reviews WHERE buyer_id=$1 AND product_id=$2',
+        [buyerId, productId]
+      );
       return row(r);
+    },
+    // Reseñas del vendedor: atraviesa órdenes → productos del vendedor
+    findBySeller: async (sellerId) => {
+      const r = await pool.query(
+        `SELECT rv.*
+         FROM reviews rv
+         JOIN orders o ON rv.order_id = o.id
+         WHERE o.seller_id = $1
+         ORDER BY rv.created_at DESC`,
+        [sellerId]
+      );
+      return rows(r);
+    },
+    // Busca la orden completada donde este comprador compró este producto a este vendedor
+    findCompletedOrderForProduct: async (buyerId, sellerId, productId) => {
+      const r = await pool.query(
+        `SELECT id FROM orders
+         WHERE buyer_id  = $1
+           AND seller_id = $2
+           AND status    = 'completed'
+           AND items @> $3::jsonb
+         ORDER BY created_at ASC
+         LIMIT 1`,
+        [buyerId, sellerId, JSON.stringify([{ productId }])]
+      );
+      return r.rows[0] ? r.rows[0].id : null;
     },
     create: async (review) => {
       const r = await pool.query(
-        `INSERT INTO reviews (id, seller_id, buyer_id, order_id, rating, comment, created_at)
+        `INSERT INTO reviews (id, product_id, buyer_id, order_id, rating, comment, created_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-        [review.id, review.sellerId, review.buyerId, review.orderId,
+        [review.id, review.productId, review.buyerId, review.orderId,
          review.rating, review.comment || null, review.createdAt || new Date()]
       );
       return row(r);
+    },
+    // 3B — Calificación promedio del vendedor
+    // Solo se muestra cuando hay al menos 20 reseñas dentro del pool
+    // de las primeras 20 ventas completadas del vendedor (ordenadas por created_at ASC)
+    calculateSellerRating: async (sellerId) => {
+      const r = await pool.query(
+        `WITH first_20 AS (
+           SELECT id FROM orders
+           WHERE seller_id = $1 AND status = 'completed'
+           ORDER BY created_at ASC
+           LIMIT 20
+         )
+         SELECT ROUND(AVG(rv.rating)::numeric, 2) AS avg_rating,
+                COUNT(rv.id)::int                 AS total
+         FROM reviews rv
+         WHERE rv.order_id IN (SELECT id FROM first_20)
+           AND rv.rating IS NOT NULL`,
+        [sellerId]
+      );
+      const { avg_rating, total } = r.rows[0];
+      // El promedio solo se expone cuando hay 20 o más calificaciones
+      if (!total || total < 20) return null;
+      return parseFloat(avg_rating);
     }
   },
 
