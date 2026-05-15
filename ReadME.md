@@ -1,1 +1,1 @@
-LINK DEL DESPLIEGUE: https://market-place-dsaw-26-01.vercel.app/
+LINK DEL DESPLIEGUE: https://vercel.com/alejogomez24s-projects/proyecto-final-be-papi-cursor/HeUVoCHdWNkYXfWTiC7u8kaU6RDA
