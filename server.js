@@ -24,21 +24,22 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // permite imágenes desde otros orígenes
 }));
 
-// ── CORS: solo aceptar el origen del frontend ──────────────────────────────────
+// ── CORS ───────────────────────────────────────────────────────────────────────
+// Si ALLOWED_ORIGINS está configurada, solo acepta esos orígenes.
+// Si no está configurada, acepta todos (comportamiento por defecto — seguro para
+// proyectos académicos donde el frontend y backend están en Vercel).
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
 
-// En desarrollo permitir localhost aunque no esté en la variable de entorno
-if (!isProd) {
-  ALLOWED_ORIGINS.push('http://localhost:3001', 'http://localhost:3000');
-}
-
 app.use(cors({
   origin: (origin, cb) => {
-    // Permitir solicitudes sin origin (Postman, curl, server-to-server)
+    // Sin origin: Postman, curl, server-to-server → siempre permitir
     if (!origin) return cb(null, true);
+    // Sin lista configurada → permitir todo
+    if (ALLOWED_ORIGINS.length === 0) return cb(null, true);
+    // Con lista → verificar
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     cb(new Error(`CORS: origen no permitido — ${origin}`));
   },
