@@ -129,6 +129,15 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+    // Producto oculto por admin — devolver 404 con flag para que el frontend
+    // pueda mostrar un mensaje específico y redirigir al catálogo
+    if (product.hidden) {
+      return res.status(404).json({
+        error: 'Este producto no está disponible.',
+        hidden: true
+      });
+    }
+
     // Agregar información del vendedor + rating promedio (3B)
     const seller = await database.users.findById(product.sellerId);
     const sellerRating = await database.reviews.calculateSellerRating(product.sellerId);
