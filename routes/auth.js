@@ -2,7 +2,6 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-// ⚠️ DB en memoria: los datos se pierden entre cold-starts en Vercel. Pendiente migración a PostgreSQL.
 const database = require('../database');
 const { authenticateToken } = require('../middleware/auth');
 
@@ -11,19 +10,18 @@ const router = express.Router();
 // Ticket 1: Generar registro con validación de correo institucional
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    // Trim para evitar espacios accidentales
+    const email    = (req.body.email    || '').trim().toLowerCase();
+    const password = (req.body.password || '');
+    const name     = (req.body.name     || '').trim();
 
     // Validar que los campos requeridos estén presentes
     if (!email || !password || !name) {
-      return res.status(400).json({ 
-        error: 'Por favor proporciona email, contraseña y nombre.' 
+      return res.status(400).json({
+        error: 'Por favor proporciona email, contraseña y nombre.'
       });
     }
 
-    // Bloquear intento de registrar admin desde endpoint público
-    if (email && email.toLowerCase().includes('admin')) {
-      // Verificación extra: si el body pide explícitamente rol admin
-    }
     // El rol admin NUNCA se asigna desde registro público
     if (req.body.roles && req.body.roles.includes('admin')) {
       return res.status(403).json({ error: 'Forbidden.' });
@@ -32,25 +30,25 @@ router.post('/register', async (req, res) => {
     // Validar correo institucional
     // Debe tener al menos 5 caracteres antes del @ y terminar en @unisabana.edu.co
     const emailRegex = /^[a-zA-Z0-9._-]{5,}@unisabana\.edu\.co$/;
-    
+
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        error: 'El correo debe ser institucional (@unisabana.edu.co) y tener al menos 5 caracteres antes del @.' 
+      return res.status(400).json({
+        error: 'El correo debe ser institucional (@unisabana.edu.co) y tener al menos 5 caracteres antes del @.'
       });
     }
 
     // Verificar si el usuario ya existe
     const existingUser = await database.users.findByEmail(email);
     if (existingUser) {
-      return res.status(409).json({ 
-        error: 'Este correo ya está registrado.' 
+      return res.status(409).json({
+        error: 'Este correo ya está registrado.'
       });
     }
 
     // Validar contraseña (mínimo 6 caracteres)
     if (password.length < 6) {
-      return res.status(400).json({ 
-        error: 'La contraseña debe tener al menos 6 caracteres.' 
+      return res.status(400).json({
+        error: 'La contraseña debe tener al menos 6 caracteres.'
       });
     }
 
@@ -73,15 +71,15 @@ router.post('/register', async (req, res) => {
     // No devolver la contraseña en la respuesta
     const { password: _, ...userWithoutPassword } = newUser;
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Usuario registrado exitosamente.',
       user: userWithoutPassword
     });
 
   } catch (error) {
     console.error('Error en registro:', error);
-    res.status(500).json({ 
-      error: 'Error al registrar usuario.' 
+    res.status(500).json({
+      error: 'Error al registrar usuario.'
     });
   }
 });
@@ -89,37 +87,38 @@ router.post('/register', async (req, res) => {
 // Ticket 21: Inicio de sesión y entrega de llave de acceso
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email    = (req.body.email    || '').trim().toLowerCase();
+    const password = (req.body.password || '');
 
     // Validar que los campos requeridos estén presentes
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'Por favor proporciona email y contraseña.' 
+      return res.status(400).json({
+        error: 'Por favor proporciona email y contraseña.'
       });
     }
 
     // Buscar el usuario por email
     const user = await database.users.findByEmail(email);
-    
+
     if (!user) {
-      return res.status(401).json({ 
-        error: 'Credenciales inválidas.' 
+      return res.status(401).json({
+        error: 'Credenciales inválidas.'
       });
     }
 
     // Verificar la contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    
+
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        error: 'Credenciales inválidas.' 
+      return res.status(401).json({
+        error: 'Credenciales inválidas.'
       });
     }
 
     // Generar el token JWT
     const token = jwt.sign(
-      { 
-        id: user.id, 
+      {
+        id: user.id,
         email: user.email,
         roles: user.roles
       },
@@ -130,7 +129,7 @@ router.post('/login', async (req, res) => {
     // No devolver la contraseña en la respuesta
     const { password: _, ...userWithoutPassword } = user;
 
-    res.json({ 
+    res.json({
       message: 'Inicio de sesión exitoso.',
       token,
       user: userWithoutPassword
@@ -138,40 +137,93 @@ router.post('/login', async (req, res) => {
 
   } catch (error) {
     console.error('Error en login:', error);
-    res.status(500).json({ 
-      error: 'Error al iniciar sesión.' 
+    res.status(500).json({
+      error: 'Error al iniciar sesión.'
     });
   }
 });
 
 // Ruta para obtener el perfil del usuario autenticado
+// Incluye sellerRating si el usuario es vendedor (TRD §4.5)
 router.get('/profile', authenticateToken, async (req, res) => {
-  const user = await database.users.findById(req.user.id);
-  
-  if (!user) {
-    return res.status(404).json({ 
-      error: 'Usuario no encontrado.' 
-    });
-  }
+  try {
+    const user = await database.users.findById(req.user.id);
 
-  const { password: _, ...userWithoutPassword } = user;
-  
-  res.json({ user: userWithoutPassword });
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuario no encontrado.'
+      });
+    }
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    // Agregar calificación promedio si es vendedor (visible en perfil — TRD §4.5)
+    if (user.roles.includes('seller')) {
+      const sellerRating = await database.reviews.calculateSellerRating(user.id);
+      userWithoutPassword.sellerRating = sellerRating; // null si < 20 reseñas
+    }
+
+    res.json({ user: userWithoutPassword });
+  } catch (error) {
+    console.error('Error al obtener perfil:', error);
+    res.status(500).json({ error: 'Error al obtener el perfil.' });
+  }
+});
+
+// PUT /auth/profile — actualizar datos del perfil (nombre, carrera, foto)
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await database.users.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const updates = {};
+
+    if (req.body.name !== undefined) {
+      const name = req.body.name.trim();
+      if (!name) return res.status(400).json({ error: 'El nombre no puede estar vacío.' });
+      updates.name = name;
+    }
+
+    if (req.body.career !== undefined) {
+      updates.career = req.body.career.trim() || null;
+    }
+
+    if (req.body.photo !== undefined) {
+      // Validar que sea una URL válida o vacío
+      const photo = req.body.photo.trim();
+      if (photo && !/^https?:\/\/.+/.test(photo)) {
+        return res.status(400).json({ error: 'La foto debe ser una URL válida (http/https).' });
+      }
+      updates.photo = photo || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
+    }
+
+    const updated = await database.users.update(user.id, updates);
+    const { password: _, ...userWithoutPassword } = updated;
+
+    res.json({ message: 'Perfil actualizado exitosamente.', user: userWithoutPassword });
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error);
+    res.status(500).json({ error: 'Error al actualizar el perfil.' });
+  }
 });
 
 // Ruta para actualizar el rol del usuario (agregar rol de vendedor)
 router.post('/become-seller', authenticateToken, async (req, res) => {
   const user = await database.users.findById(req.user.id);
-  
+
   if (!user) {
-    return res.status(404).json({ 
-      error: 'Usuario no encontrado.' 
+    return res.status(404).json({
+      error: 'Usuario no encontrado.'
     });
   }
 
   if (user.roles.includes('seller')) {
-    return res.status(400).json({ 
-      error: 'Ya tienes el rol de vendedor.' 
+    return res.status(400).json({
+      error: 'Ya tienes el rol de vendedor.'
     });
   }
 
@@ -180,7 +232,7 @@ router.post('/become-seller', authenticateToken, async (req, res) => {
 
   const { password: _, ...userWithoutPassword } = user;
 
-  res.json({ 
+  res.json({
     message: 'Ahora eres un vendedor.',
     user: userWithoutPassword
   });
@@ -189,7 +241,8 @@ router.post('/become-seller', authenticateToken, async (req, res) => {
 // POST /auth/admin-login — login exclusivo para administradores
 router.post('/admin-login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email    = (req.body.email    || '').trim().toLowerCase();
+    const password = (req.body.password || '');
     if (!email || !password) {
       return res.status(400).json({ error: 'Por favor proporciona email y contraseña.' });
     }

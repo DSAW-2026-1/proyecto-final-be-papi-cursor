@@ -65,10 +65,12 @@ const database = {
     },
     create: async (user) => {
       const r = await pool.query(
-        `INSERT INTO users (id, email, password, name, roles, status, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+        `INSERT INTO users (id, email, password, name, roles, status, career, photo, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
         [user.id, user.email, user.password, user.name,
-         user.roles, user.status || 'active', user.createdAt || new Date()]
+         user.roles, user.status || 'active',
+         user.career || null, user.photo || null,
+         user.createdAt || new Date()]
       );
       return row(r);
     },
