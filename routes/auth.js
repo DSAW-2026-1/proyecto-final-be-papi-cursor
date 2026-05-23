@@ -214,6 +214,43 @@ router.post('/admin-login', async (req, res) => {
   }
 });
 
+// Cambiar contraseña del usuario autenticado
+router.put('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Por favor proporciona la contraseña actual y la nueva.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    }
+
+    const user = await database.users.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado.' });
+    }
+
+    // Verificar que la contraseña actual sea correcta
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: 'La contraseña actual es incorrecta.' });
+    }
+
+    // Hashear y guardar la nueva contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    await database.users.update(user.id, { password: hashedPassword });
+
+    res.json({ message: 'Contraseña actualizada exitosamente.' });
+
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    res.status(500).json({ error: 'Error al cambiar la contraseña.' });
+  }
+});
+
 // Ruta para quitar el rol de vendedor
 router.post('/leave-seller', authenticateToken, async (req, res) => {
   const user = await database.users.findById(req.user.id);
