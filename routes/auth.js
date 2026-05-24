@@ -115,6 +115,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Verificar si la cuenta está suspendida
+    if (user.suspendedUntil && new Date(user.suspendedUntil) > new Date()) {
+      const fecha = new Date(user.suspendedUntil).toLocaleDateString('es-CO', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+      return res.status(403).json({
+        error: `Tu cuenta está suspendida hasta el ${fecha}. Contacta al administrador.`,
+        suspended: true
+      });
+    }
+
     // Generar el token JWT
     const token = jwt.sign(
       {
