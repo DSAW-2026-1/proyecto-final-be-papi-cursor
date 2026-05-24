@@ -23,23 +23,35 @@ router.get('/', authenticateToken, async (req, res) => {
       await database.carts.create(cart);
     }
 
-    // Agregar información de productos a los items
-    const cartWithProducts = {
-      ...cart,
-      items: await Promise.all(cart.items.map(async (item) => {
-        const product = await database.products.findById(item.productId);
-        return { ...item, product: product || null };
-      }))
-    };
+    // Filtrar items: solo mantener productos activos y no ocultos
+    // Si hay productos eliminados/ocultos, limpiarlos del carrito automáticamente
+    const validItems = [];    // items que se quedan (sin campo product)
+    const enrichedItems = []; // items enriquecidos con datos del producto
+
+    for (const item of cart.items) {
+      const product = await database.products.findById(item.productId);
+      if (product && product.isActive && !product.hidden) {
+        validItems.push(item);
+        enrichedItems.push({ ...item, product });
+      }
+      // Si el producto no existe, está inactivo u oculto → se descarta
+    }
+
+    // Persistir el carrito limpio si se eliminó algún item
+    const removedCount = cart.items.length - validItems.length;
+    if (removedCount > 0) {
+      await database.carts.update(req.user.id, { items: validItems });
+    }
 
     // Calcular total
-    const total = cartWithProducts.items.reduce((sum, item) => {
-      return sum + (item.product ? item.product.price * item.quantity : 0);
+    const total = enrichedItems.reduce((sum, item) => {
+      return sum + (item.product.price * item.quantity);
     }, 0);
 
-    res.json({ 
-      cart: cartWithProducts,
-      total
+    res.json({
+      cart: { ...cart, items: enrichedItems },
+      total,
+      removedCount // el frontend lo usa para mostrar el aviso
     });
 
   } catch (error) {

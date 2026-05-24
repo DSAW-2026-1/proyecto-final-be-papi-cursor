@@ -129,8 +129,15 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Producto oculto por admin — devolver 404 con flag para que el frontend
-    // pueda mostrar un mensaje específico y redirigir al catálogo
+    // Producto eliminado (isActive: false) — no disponible
+    if (!product.isActive) {
+      return res.status(404).json({
+        error: 'Este producto ya no está disponible.',
+        unavailable: true
+      });
+    }
+
+    // Producto oculto por admin
     if (product.hidden) {
       return res.status(404).json({
         error: 'Este producto no está disponible.',
