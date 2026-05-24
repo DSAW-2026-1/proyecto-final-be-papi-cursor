@@ -170,17 +170,32 @@ router.get('/products', authenticateToken, isAdmin, async (req, res) => {
   }
 });
 
-// DELETE /admin/products/:id — soft delete
+// DELETE /admin/products/:id — soft delete (isActive: false)
 router.delete('/products/:id', authenticateToken, isAdmin, async (req, res) => {
   try {
     const product = await database.products.findById(req.params.id);
     if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
 
-    await database.products.update(req.params.id, { isActive: false });
-    res.json({ message: 'Producto eliminado por administrador.', productId: req.params.id });
+    const updated = await database.products.update(req.params.id, { isActive: false });
+    res.json({ message: 'Producto eliminado por administrador.', product: updated });
   } catch (error) {
     console.error('Error al eliminar producto:', error);
     res.status(500).json({ error: 'Error al eliminar el producto.' });
+  }
+});
+
+// PATCH /admin/products/:id/restore — restaurar producto eliminado
+router.patch('/products/:id/restore', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const product = await database.products.findById(req.params.id);
+    if (!product) return res.status(404).json({ error: 'Producto no encontrado.' });
+    if (product.isActive) return res.status(400).json({ error: 'El producto ya está activo.' });
+
+    const updated = await database.products.update(req.params.id, { isActive: true });
+    res.json({ message: 'Producto restaurado exitosamente.', product: updated });
+  } catch (error) {
+    console.error('Error al restaurar producto:', error);
+    res.status(500).json({ error: 'Error al restaurar el producto.' });
   }
 });
 
